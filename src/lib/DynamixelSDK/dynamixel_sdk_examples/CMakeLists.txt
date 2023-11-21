@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(miniproject)
+project(dynamixel_sdk_examples)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -15,34 +15,29 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+# Find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(dynamixel_sdk REQUIRED)
+find_package(dynamixel_sdk_custom_interfaces REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(OpenCV REQUIRED)
-find_package(cv_bridge REQUIRED)
 
-# Include seperate headers
-include_directories(${CMAKE_SOURCE_DIR})
-include_directories(src/lib/AXI-DMA-UIO-cpp-driver/include)
-include_directories(src/lib/ReservedMemory-LKM-and-UserSpaceAPI)
-include_directories(src/lib/Invert_v1_0/src)
+include_directories(include)
 
-add_executable(miniproject
-  src/miniproject.cpp
+# Build
+add_executable(read_write_node src/read_write_node.cpp)
+ament_target_dependencies(read_write_node
+  dynamixel_sdk_custom_interfaces
+  dynamixel_sdk
+  rclcpp
 )
 
-
-ament_target_dependencies(miniproject
-	rclcpp
-	sensor_msgs
-	OpenCV
-	cv_bridge
+# Install
+install(TARGETS
+  read_write_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
-
-install(TARGETS miniproject DESTINATION lib/${PROJECT_NAME})
-
+# Test
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
