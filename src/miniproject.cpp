@@ -18,9 +18,9 @@
 #define XST_FAILURE		1L	//This is nice to have :)
 
 #define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH		800
-#define IMAGE_HEIGHT	600
-#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(800*600*4) // Number of bytes (rgb + grayscale)
+#define IMAGE_WIDTH		320
+#define IMAGE_HEIGHT	240
+#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(320*240*4) // Number of bytes (rgb + grayscale)
 #define LENGTH_INPUT 	LENGTH*3/4 // Number of bytes for input (3/4 because rgb)
 #define LENGTH_OUTPUT	LENGTH/4 // Number of bytes for output (1/4 because grayscale)
 
@@ -55,9 +55,7 @@ class ImageSubscriber : public rclcpp::Node
 				10
 			);
 
-            out_img.create(480,640,CV_8U);
-
-            init_IPs_and_setup();
+            //init_IPs_and_setup();
 
 		}
 
@@ -67,9 +65,8 @@ class ImageSubscriber : public rclcpp::Node
 		
 
 		cv::Mat inp_img;
-        cv::Mat inp_img_rgb;
-        cv::Mat out_img;
 
+        int results[4];
 
 
         int init_IPs_and_setup(){
@@ -86,6 +83,10 @@ class ImageSubscriber : public rclcpp::Node
 			cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
 			inp_img = cv_ptr->image;
 
+            std::cout << inp_img.type() << std::endl;
+
+            return;
+
             RCLCPP_INFO(this->get_logger(), "Loading image to dram");
 
             loadImage();
@@ -98,43 +99,33 @@ class ImageSubscriber : public rclcpp::Node
 
             RCLCPP_INFO(this->get_logger(), "IP completed");
 
-            outputImage();
+            outputResults();
 
             RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
 
-			sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
+            //TODO
+			//sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
 			
             RCLCPP_INFO(this->get_logger(), "image loaded tp msg");
 
-			image_publisher_->publish(*processed_image_msg.get());
+			//image_publisher_->publish(*processed_image_msg.get());
 		}
 
         
         void loadImage() {
-            int i = 0;
-            cv::cvtColor(inp_img,inp_img_rgb,cv::COLOR_YUV2RGB_YUY2);
-            //printf("inp img size: %d,%d",inp_img_rgb.cols,inp_img_rgb.rows);
-            int cols = inp_img_rgb.cols;
-            int rows = inp_img_rgb.rows;
+            int cols = inp_img.cols;
+            int rows = inp_img.rows;
             for (int y = 0; y < rows; y++){
                 for (int x = 0; x < cols; x++){
-                    for (int c = 0; c < 3; c++){
-                        inp_buff[y*cols*3+x*3+c + (3-(i%4)*2)] = inp_img_rgb.at<cv::Vec3b>(y,x)[c];
-                        i++;
-                    }
+                    inp_buff[y*cols+x] = inp_img.at<cv::Vec3b>(y,x)[0];
                 }
             }
         }
 
-        void outputImage() {
-            int i = 0;
-            int cols = out_img.cols;
-            int rows = out_img.rows;
-            for (int y = 0; y < rows; y++){
-                for (int x = 0; x < cols; x++){
-                    out_img.at<uint8_t>(y,x) = out_buff[y*cols+x]; //+ (3-(i%4)*2)
-                    i++;
-                }
+        void outputResults() {
+            int result_count = 4;
+            for (int i = 0; i < result_count; i++){
+                results[i] = out_buff[i];
             }
         }
 
@@ -191,6 +182,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    /*
     int Status;
     Status = XInvert_Initialize(&invertIP, "Invert");
 
@@ -198,7 +190,7 @@ int main(int argc, char *argv[])
         printf("Invert initialization failed %d\r\n", Status);
         return XST_FAILURE;
     }
-
+    */
 	setvbuf(stdout,NULL,_IONBF,BUFSIZ);
 
 	rclcpp::init(argc,argv);
