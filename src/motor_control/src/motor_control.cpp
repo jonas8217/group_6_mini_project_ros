@@ -21,11 +21,13 @@
 #define XST_FAILURE		1L	//This is nice to have :)
 
 #define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH		320
-#define IMAGE_HEIGHT	240
-#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(320*240*4) // Number of bytes (rgb + grayscale)
+#define IMAGE_WIDTH		160
+#define IMAGE_HEIGHT	120
+#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(160*120*4) // Number of bytes (rgb + grayscale)
 #define LENGTH_INPUT 	LENGTH*3/4 // Number of bytes for input (3/4 because rgb)
-#define LENGTH_OUTPUT	LENGTH/4 // Number of bytes for output (1/4 because grayscale)
+//#define LENGTH_OUTPUT	LENGTH/4 // Number of bytes for output (1/4 because grayscale)
+
+#define CROPPED_IMAGE_SIZE		60
 
 #define P_START 0x70000000
 #define TX_OFFSET 0
@@ -38,6 +40,9 @@
 
 #define MOTOR_CENTER  512
 #define CAMERA_CENTER 695
+
+
+
 
 uint8_t *inp_buff;
 uint8_t *out_buff;
@@ -66,6 +71,8 @@ class ImageSubscriber : public rclcpp::Node
 				10
 			);
 
+            out_img = cv::Mat();
+
             //init_IPs_and_setup();
 
 		}
@@ -76,6 +83,7 @@ class ImageSubscriber : public rclcpp::Node
 		rclcpp::Publisher<dynamixel_sdk_custom_interfaces::msg::SetPosition>::SharedPtr motor_publisher_;
 
 		cv::Mat inp_img;
+        cv::Mat out_img;
 
         int results[4];
 
@@ -94,13 +102,16 @@ class ImageSubscriber : public rclcpp::Node
 			cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
 			inp_img = cv_ptr->image;
 
-            printf("type: %i", inp_img.type());
+            
 
-            return;
 
             RCLCPP_INFO(this->get_logger(), "Loading image to dram");
 
             loadImage();
+            
+            //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
+            
+            return;
 
 			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
@@ -114,8 +125,6 @@ class ImageSubscriber : public rclcpp::Node
 
             RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
 
-            //TODO
-			//sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
 			
             RCLCPP_INFO(this->get_logger(), "image loaded tp msg");
 
@@ -126,9 +135,13 @@ class ImageSubscriber : public rclcpp::Node
         void loadImage() {
             int cols = inp_img.cols;
             int rows = inp_img.rows;
-            for (int y = 0; y < rows; y++){
-                for (int x = 0; x < cols; x++){
-                    inp_buff[y*cols+x] = inp_img.at<cv::Vec3b>(y,x)[0];
+
+            int rows_start = rows/2 - CROPPED_IMAGE_SIZE/2;
+            int cols_start = cols/2 - CROPPED_IMAGE_SIZE/2;
+            
+            for (int y = 0; y < CROPPED_IMAGE_SIZE; y++){
+                for (int x = 0; x < CROPPED_IMAGE_SIZE; x++){
+                    inp_buff[y*cols+x] = inp_img.at<cv::Vec3b>(rows_start + y, cols_start + x)[0];
                 }
             }
         }
