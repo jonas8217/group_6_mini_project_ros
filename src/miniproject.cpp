@@ -11,6 +11,8 @@
 #include "lib/Invert_v1_0/src/xinvert_sinit.c"
 #include "lib/Invert_v1_0/src/xinvert_linux.c"
 
+#include <string>
+
 #define UIO_INVERT_Nsjjk 0L
 
 #define UIO_DMA_N 1
@@ -29,9 +31,9 @@
 #define RX_OFFSET_BYTES LENGTH_INPUT
 #define RX_OFFSET_32 RX_OFFSET_BYTES/4 // This needs to be a whole number, otherwise input in ram is overwritten!
 
-Reserved_Mem pmem;
-AXIDMAController dma(UIO_DMA_N, 0x10000);
-XInvert invertIP;
+//Reserved_Mem pmem;
+//AXIDMAController dma(UIO_DMA_N, 0x10000);
+//XInvert invertIP;
 
 uint8_t *inp_buff;
 uint8_t *out_buff;
@@ -83,7 +85,7 @@ class ImageSubscriber : public rclcpp::Node
 			cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
 			inp_img = cv_ptr->image;
 
-            std::cout << inp_img.type() << std::endl;
+            printf("type: %i", inp_img.type());
 
             return;
 
@@ -95,7 +97,7 @@ class ImageSubscriber : public rclcpp::Node
 
             RCLCPP_INFO(this->get_logger(), "Running IP");
 
-            run_Invert_IP();
+            //run_Invert_IP();
 
             RCLCPP_INFO(this->get_logger(), "IP completed");
 
@@ -129,38 +131,38 @@ class ImageSubscriber : public rclcpp::Node
             }
         }
 
-        void run_Invert_IP(){
+        // void run_Invert_IP(){
             
-            pmem.transfer(inp_buff, TX_OFFSET, LENGTH_INPUT);
+        //     pmem.transfer(inp_buff, TX_OFFSET, LENGTH_INPUT);
 
-            dma.MM2SReset();
-            dma.S2MMReset();
+        //     dma.MM2SReset();
+        //     dma.S2MMReset();
 
-            dma.MM2SHalt();
-            dma.S2MMHalt();
+        //     dma.MM2SHalt();
+        //     dma.S2MMHalt();
 
-            dma.MM2SInterruptEnable();
-    		dma.S2MMInterruptEnable();
+        //     dma.MM2SInterruptEnable();
+    	// 	dma.S2MMInterruptEnable();
 
-            dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
-            dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
+        //     dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
+        //     dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
 
-            while(!XInvert_IsReady(&invertIP)) {}
+        //     while(!XInvert_IsReady(&invertIP)) {}
 
-            XInvert_Start(&invertIP);
+        //     XInvert_Start(&invertIP);
 
-            dma.MM2SStart();
-            dma.S2MMStart();
+        //     dma.MM2SStart();
+        //     dma.S2MMStart();
 
-            dma.MM2SSetLength(LENGTH_INPUT);
-            dma.S2MMSetLength(LENGTH_OUTPUT);
+        //     dma.MM2SSetLength(LENGTH_INPUT);
+        //     dma.S2MMSetLength(LENGTH_OUTPUT);
             
-            while (!dma.MM2SIsSynced()) {}
-            while (!dma.S2MMIsSynced()) {}
-            while(!XInvert_IsDone(&invertIP)) {}
+        //     while (!dma.MM2SIsSynced()) {}
+        //     while (!dma.S2MMIsSynced()) {}
+        //     while(!XInvert_IsDone(&invertIP)) {}
 
-            pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
-        }
+        //     pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
+        // }
 
 
 

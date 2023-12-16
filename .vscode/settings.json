@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "xinvert.c": "cpp",
+        "iosfwd": "cpp"
+    }
+}
