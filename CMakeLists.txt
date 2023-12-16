@@ -32,7 +32,6 @@ add_executable(miniproject
   src/miniproject.cpp
 )
 
-
 ament_target_dependencies(miniproject
 	rclcpp
 	sensor_msgs
@@ -40,8 +39,19 @@ ament_target_dependencies(miniproject
 	cv_bridge
 )
 
+add_executable(Angle_Node
+  src/Angle_Node.cpp
+)
 
-install(TARGETS miniproject DESTINATION lib/${PROJECT_NAME})
+ament_target_dependencies(Angle_Node
+	rclcpp
+	sensor_msgs
+	OpenCV
+	cv_bridge
+)
+
+
+install(TARGETS miniproject Angle_Node DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
