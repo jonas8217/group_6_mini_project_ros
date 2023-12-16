@@ -5,13 +5,16 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/ros/foxy/include/**",
-                "/usr/include/opencv4"
+                "/usr/include/opencv4",
+                "${workspaceFolder}/src/motor_control/include",
+                "${workspaceFolder}/install/dynamixel_sdk_custom_interfaces/include"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c17",
             "cppStandard": "gnu++14",
-            "intelliSenseMode": "linux-gcc-x64"
+            "intelliSenseMode": "linux-gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

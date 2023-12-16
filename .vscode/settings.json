@@ -1,6 +1,15 @@
 {
     "files.associations": {
         "xinvert.c": "cpp",
-        "iosfwd": "cpp"
-    }
+        "iosfwd": "cpp",
+        "*.msg": "cpp",
+        "xinvert_sinit.c": "cpp"
+    },
+    "python.autoComplete.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "python.analysis.extraPaths": [
+        "/opt/ros/foxy/lib/python3.8/site-packages"
+    ],
+    "cmake.sourceDirectory": "/home/jonas/embedded/group_6_mini_project_ros/src/motor_control"
 }
