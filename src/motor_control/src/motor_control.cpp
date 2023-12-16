@@ -41,7 +41,7 @@
 #define MOTOR_CENTER  512
 #define CAMERA_CENTER 695
 
-
+// positions 275 485 685 899
 
 
 uint8_t *inp_buff;
@@ -209,12 +209,12 @@ int main(int argc, char *argv[])
         printf("could not allocate user buffer\n");
         return -1;
     }
-    out_buff = (uint8_t *)malloc(LENGTH_OUTPUT);
-    if (out_buff == NULL)
-    {
-        printf("could not allocate user buffer\n");
-        return -1;
-    }
+    // out_buff = (uint8_t *)malloc(LENGTH_OUTPUT);
+    // if (out_buff == NULL)
+    // {
+    //     printf("could not allocate user buffer\n");
+    //     return -1;
+    // }
 
     /*
     int Status;
