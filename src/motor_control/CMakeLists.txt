@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.5)
-project(motor_control)
+project(screw_it)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -28,20 +28,29 @@ include_directories(${CMAKE_SOURCE_DIR})
 include_directories(include) # remeber to include the .h files
 
 
-add_executable(${PROJECT_NAME}
+add_executable(motor_control
   src/motor_control.cpp
 )
 
+add_executable(CNN_interface
+  src/CNN_interface.cpp
+)
 
-ament_target_dependencies(${PROJECT_NAME}
+ament_target_dependencies(motor_control
 	rclcpp
 	sensor_msgs
-	OpenCV
-	cv_bridge
+  std_msgs
   dynamixel_sdk_custom_interfaces # for vscode?
 )
 
-install(TARGETS ${PROJECT_NAME} DESTINATION lib/${PROJECT_NAME})
+ament_target_dependencies(CNN_interface
+	rclcpp
+  OpenCV
+	cv_bridge
+  std_msgs
+)
+
+install(TARGETS motor_control CNN_interface DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
