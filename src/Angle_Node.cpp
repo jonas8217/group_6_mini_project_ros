@@ -48,21 +48,24 @@ class AnglePublisher : public rclcpp::Node
 
             RCLCPP_INFO(this->get_logger(), "Starting camera subscription");
 
+            rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+            auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
             camera_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
                     "/image_raw",
-                    10,
+                    qos,
                     std::bind(&AnglePublisher::onImageMsg, this, std::placeholders::_1)
             );
 
             screw_subscription_ = this->create_subscription<std_msgs::msg::Int16>(
                     "/screw_type",
-                    10,
+                    qos,
                     std::bind(&AnglePublisher::onScrewMsg, this, std::placeholders::_1)
             );
 
             Angle_Publisher_ = this->create_publisher<std_msgs::msg::Float32>(
 				"/screw_angle",
-				10
+				qos
 			);
         }
 
