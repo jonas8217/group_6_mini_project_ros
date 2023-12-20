@@ -12,5 +12,6 @@
     "python.analysis.extraPaths": [
         "/opt/ros/foxy/lib/python3.8/site-packages"
     ],
-    "cmake.sourceDirectory": "/home/jonas/embedded/group_6_mini_project_ros/src/motor_control"
+    "cmake.sourceDirectory": "/home/jonas/embedded/group_6_mini_project_ros/src/motor_control",
+    "cmake.configureOnOpen": false
 }

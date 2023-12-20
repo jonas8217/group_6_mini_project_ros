@@ -24,7 +24,7 @@
 #define IMAGE_HEIGHT	120
 #define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(160*120*4) // Number of bytes (rgb + grayscale)
 #define LENGTH_INPUT 	LENGTH*3/4 // Number of bytes for input (3/4 because rgb)
-#define LENGTH_OUTPUT	1
+#define LENGTH_OUTPUT	4
 
 #define CROPPED_IMAGE_SIZE		60
 
@@ -79,7 +79,7 @@ class CNNInterface : public rclcpp::Node
 		cv::Mat inp_img;
         cv::Mat out_img;
 
-        uchar results;
+        float results[LENGTH_OUTPUT];
 
 
         // int init_IPs_and_setup(){
@@ -143,7 +143,8 @@ class CNNInterface : public rclcpp::Node
         }
 
         void outputResults() {
-            results = out_buff[0];
+            for (int i = 0; i < LENGTH_OUTPUT; i++)
+                results[i] = out_buff[i];
         }
 
         // void run_Invert_IP(){

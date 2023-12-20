@@ -1,19 +1,24 @@
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/int16.hpp>
 #include <std_msgs/msg/float32.hpp>
+#include <std_msgs/msg/int16.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
+
 
 #include <chrono>
 
 #include "dynamixel_sdk_custom_interfaces/msg/set_position.hpp"
 
-#define MOTOR_CENTER    512
-#define CAMERA_CENTER   695
-#define MOUNT_DIFF      MOTOR_CENTER - CAMERA_CENTER;
+#define MOTOR_START         100 
+#define CAMERA_START        270
+#define CAMERA_END          890
+#define MOUNT_DIFF          CAMERA_START - MOTOR_START;
 
+#define STEPS_PER_DEG       (CAMERA_END - CAMERA_START) / 180.0
 
+#define UPDATE_INTERVAL_US  50000
+#define US_PER_SEC          1000000
+#define STEPS_PER_SEC       US_PER_SEC / UPDATE_INTERVAL_US
 
-uint8_t *inp_buff;
-uint8_t *out_buff;
 
 int sign(float n1, float n2)
 {
@@ -34,10 +39,15 @@ class MotorControl : public rclcpp::Node
                 std::bind(&MotorControl::onAngleMsg, this, std::placeholders::_1)
 			);
 
-            screw_type_subscription_ = this->create_subscription<std_msgs::msg::Int16>(
-                "/screw_type",
+            screw_type_subscription_ = this->create_subscription<std_msgs::msg::Float32MultiArray>(
+                "/CNN_screw_type",
                 10,
                 std::bind(&MotorControl::ontypeMsg, this, std::placeholders::_1)
+			);
+
+            screw_type_publisher_ = this->create_publisher<std_msgs::msg::Int16>(
+				"/screw_type",
+				10
 			);
 
             motor_publisher_ = this->create_publisher<dynamixel_sdk_custom_interfaces::msg::SetPosition>(
@@ -46,79 +56,200 @@ class MotorControl : public rclcpp::Node
 			);
 
             updater = this->create_wall_timer(
-                std::chrono::microseconds(1000000), 
+                std::chrono::microseconds(UPDATE_INTERVAL_US), 
                 std::bind(&MotorControl::run_motor_controller, this)
             );
             
-            // reset motors to middle
-            commandMotor(0,0,true);
-            commandMotor(1,0,true);
 		}
 
 	private:
 		rclcpp::Publisher<dynamixel_sdk_custom_interfaces::msg::SetPosition>::SharedPtr motor_publisher_;
+        rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr screw_type_publisher_;
         rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr angle_subscription_;
-        rclcpp::Subscription<std_msgs::msg::Int16>::SharedPtr screw_type_subscription_;
+        rclcpp::Subscription<std_msgs::msg::Float32MultiArray>::SharedPtr screw_type_subscription_;
 
-        rclcpp::Duration duration = rclcpp::Duration(1,100000);
         rclcpp::TimerBase::SharedPtr updater;
 
 
-        float angle = 0.0;
-        uint8_t screw_type = 0;
-        bool new_angle = false; 
-        bool new_type = false;
+        float angle_ = 0.0;
+        float screw_type_[4] = {0,0,0,0};
+        bool new_angle_ = false; 
+        bool new_type_ = false;
 
         void onAngleMsg(const std_msgs::msg::Float32::SharedPtr msg) {
         	RCLCPP_INFO(this->get_logger(), "Received angle from angle detector");
-            angle = msg->data;
-            new_angle = true;
+            angle_ = msg->data;
+            new_angle_ = true;
         }
 
-        void ontypeMsg(const std_msgs::msg::Int16::SharedPtr msg) {
+        void ontypeMsg(const std_msgs::msg::Float32MultiArray::SharedPtr msg) {
         	RCLCPP_INFO(this->get_logger(), "Received screw type from CNN");
-            screw_type = msg->data;
-            new_type = true;
+            for (int it = 0; it < 4; it++)
+            {
+                screw_type_[it] += msg->data[it];
+            }
+            new_type_ = true;
         }
 
-        void commandMotor(int id, float motor_angle, bool step = false)
+        void commandMotor(int id, int motor_position, bool degrees = false)
         {
-            auto msg = dynamixel_sdk_custom_interfaces::msg::SetPosition::SharedPtr();
-            msg->id = id;
-            if (step) {
-                msg->position = motor_angle;
-            }
-            else
+            dynamixel_sdk_custom_interfaces::msg::SetPosition msg;
+            msg.id = id;
+            if (degrees)
             {
-                msg->position = 512 + motor_angle * 3.4;
+                motor_position *= STEPS_PER_DEG;
             }
-
-
-            motor_publisher_->publish(*msg.get());
+            msg.position = motor_position;
+            motor_publisher_->publish(msg);
             return;
         }
 
-        int get_approach_step(float desired, float current)
+        float get_approach_step(float desired, float current)
         {
-            float rate = 1;
+            float deg_pr_sec = 30.0;
+            float rate = deg_pr_sec/((float)STEPS_PER_SEC) * STEPS_PER_DEG;
+            if ( abs(desired - current) <= rate )   
+            {
+                return desired;
+            }
             int dir = sign(desired, current);
             return current + dir * rate; 
         }
 
+        bool screw_angle_is_valid(int angle_count)
+        {
+            if (angle_count == 0)
+            {
+                RCLCPP_INFO(this->get_logger(), "Could not identify screw angle");    
+                return false;
+            }
+            return true;
+        }
+
+        bool screw_type_is_valid(float type_sum[4])
+        {
+            float test_sum = 0;
+            for (int it = 0; it < 4; it++)
+            {
+                test_sum += type_sum[it];
+            }
+            if (test_sum == 0)
+            {
+                RCLCPP_INFO(this->get_logger(), "Could not identify screw type");    
+                return false;
+            }
+            return true;
+        }
+
+        void do_once()
+        {
+            // reset motors to middle
+            RCLCPP_INFO(this->get_logger(), "First reset");
+            commandMotor(0,512);
+            rclcpp::sleep_for(std::chrono::nanoseconds(1000000000)); // wait 0.5 seconds
+            RCLCPP_INFO(this->get_logger(), "Second reset");
+            commandMotor(1,CAMERA_START);
+            rclcpp::sleep_for(std::chrono::nanoseconds(1000000000)); // wait 0.5 seconds
+        }
+
         void run_motor_controller()
         {
-            RCLCPP_INFO(this->get_logger(), "Run motor controller");
-            return;
-            // positions 275 485 685 899
-            const int positions[4] = {275, 485, 685, 899}; // magic numbers for center of each screw position for the camera
-            static float pos_main = 0;
-            static int pos_iter = 0;
+            static bool done_once = false;
+            if (! done_once) {do_once(); done_once = true;}
 
-            float desired_pos_main = (512 - positions[pos_iter])/3.4;
+            //RCLCPP_INFO(this->get_logger(), "Run motor controller");
+            // magic numbers for center of each screw position for the camera
+            // positions 275 485 685 899 (before tape)
+            // positions 270 475 680 890 (with tape)
             
-            float command_angle_main = get_approach_step(desired_pos_main, pos_main);
-            commandMotor(1,command_angle_main);
+            const float motor_steps_per_slot = (CAMERA_END - CAMERA_START) / 3.0;
+            static int pos_main = CAMERA_START;
+            static int pos_iter = 0;
+            static int i = 0;
+            static int angle_count = 0;
+            static float angle_sum = 0.0;
+            static float type_sum[4] = {0, 0, 0, 0};
+            
+            int desired_pos = CAMERA_START + pos_iter * motor_steps_per_slot;
+            int command_angle_main = get_approach_step(desired_pos, pos_main);
+            
+            std::string type_names[4] = {"cross","flat","penta","square"};
 
+            if (pos_main == desired_pos)
+            {
+                if (i == 0){
+                    memset(type_sum, 0, sizeof(type_sum)); 
+                    new_type_ = false;
+                }
+                // wait for 1 second
+                if (i == 1 * STEPS_PER_SEC)
+                {
+                    new_angle_ = false;
+                    angle_count = 0;
+                    angle_sum = 0.0;
+                    RCLCPP_INFO(this->get_logger(), "Checking screw type");
+                    if (screw_type_is_valid(type_sum))
+                    {
+                        float max_val = 0;
+                        int type = 0;
+                        for (int it = 0; it < 4; it++)
+                        {
+                            if (type_sum[it] > max_val)
+                            {
+                                max_val = type_sum[it];
+                                type = it;
+                            }
+                        }
+
+                        RCLCPP_INFO(this->get_logger(), "Screw type: %f", type_names[type]);
+
+                        std_msgs::msg::Int16 msg;
+                        msg.data = type;
+                        screw_type_publisher_->publish(msg); // send message about screw type to angle detector
+                    }
+
+                }
+                // wait an additional second
+                if (i == 2 * STEPS_PER_SEC)
+                {
+                    i = 0;
+                    RCLCPP_INFO(this->get_logger(), "Checking screw angle");
+                    
+                    if (screw_angle_is_valid(angle_count))
+                    {
+                        float angle = angle_sum/(float)angle_count;
+                        RCLCPP_INFO(this->get_logger(), "Screw found at angle %f", angle);
+                        commandMotor(0, angle, true);
+                    }
+
+
+                    pos_iter ++;
+                    pos_iter %= 4;    
+                }
+                else {
+                    if (new_angle_){
+                        if (angle_ != 360){
+                            angle_sum += angle_;
+                            angle_count++;
+                        }
+                        new_angle_ = false;
+                    }
+                    if (new_type_){
+                        for (int it = 0; it < 4; it++)
+                        {
+                            type_sum[it] += screw_type_[it];
+                        }
+                        new_type_ = false;
+                    }
+                }
+                i++;
+            }
+            else{
+                i = 0;
+                RCLCPP_INFO(this->get_logger(), "position: %i", command_angle_main);
+                commandMotor(1,command_angle_main);
+            }
+            pos_main = command_angle_main;
         }
 
 
