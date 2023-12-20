@@ -540,6 +540,115 @@ class AnglePublisher : public rclcpp::Node
             return Angle;
         }
 
+        float Penta_Head_Angle(Mat Image, int Radius){
+            // Get image size
+            int Rows = Image.rows;
+            int Cols = Image.cols;
+
+            // Find center of image
+            vector<int> Center = {Cols/2,Rows/2};
+
+            // Outputs
+            float Angle = 360;
+            Mat Angle_Image = Image.clone();
+
+            // Test probabilistic Hough transform
+            vector<Vec4i> Lines;
+            int Pixel_Resolution = 1;
+            float Angle_Resolution = (CV_PI/180)*0.01;
+            int Votes_Threshold = 15;
+            int Min_Length = 5;
+            int Max_Gap = 5;
+            HoughLinesP(Image,Lines,Pixel_Resolution,Angle_Resolution,Votes_Threshold,Min_Length,Max_Gap);
+
+
+            if(Lines.size() < 1){
+                cout << "Not enough lines" << endl;
+                return Angle;
+            }
+
+            // Remove all points from image to focus on hough lines
+            for(int i = 0; i < Cols; i++){
+                for(int j = 0; j < Rows; j++){
+                    if(Angle_Image.at<uchar>(Point(i,j)) == 255){
+                        Angle_Image.at<uchar>(Point(i,j)) = 0;
+                    }
+                }
+            }
+
+            // For each line rotate it 360 degrees in 72 degree interval and take the version closest to the top
+            vector<Vec4i> Best_Lines;
+            for(int i = 0; i < Lines.size(); i++){
+                Vec4i Best_Line = Lines[i];
+                int Best_y = 100;
+                for(int j = 0; j < 5; j++){
+                    int x1 = 0;
+                    int y1 = 0;
+                    int x2 = 0;
+                    int y2 = 0;
+
+                    if(j == 0){
+                        x1 = Lines[i][0];
+                        y1 = Lines[i][1];
+                        x2 = Lines[i][2];
+                        y2 = Lines[i][3];
+                    }
+                    else{
+                        float Theta = (72*M_PI/180)*j;
+                        x1 = (Lines[i][0]-Center[0])*cos(Theta)-(Lines[i][1]-Center[1])*sin(Theta) + Center[0];
+                        y1 = (Lines[i][0]-Center[0])*sin(Theta)+(Lines[i][1]-Center[1])*cos(Theta) + Center[1];
+                        x2 = (Lines[i][2]-Center[0])*cos(Theta)-(Lines[i][3]-Center[1])*sin(Theta) + Center[0];
+                        y2 = (Lines[i][2]-Center[0])*sin(Theta)+(Lines[i][3]-Center[1])*cos(Theta) + Center[1];
+                    }
+
+                    // Calculate center y
+                    int Center_y = (y1+y2)/2;
+
+                    // If highest center y keep line
+                    if(Center_y < Best_y){
+                        Best_Line = {x1,y1,x2,y2};
+                        Best_y = Center_y;
+                    }
+
+                }
+                Best_Lines.push_back(Best_Line);
+            }
+
+            // For each kept line take the one closest to 90 degrees from the center vertical axis
+            float Vertical_x_Change = (Center[0])-(Center[0]);
+            float Vertical_y_Change = (Center[1]+20)-(Center[1]-20);
+
+            float Vertical_Norm = sqrt(Vertical_x_Change*Vertical_x_Change+Vertical_y_Change*Vertical_y_Change);
+            for(int i = 0; i < Best_Lines.size(); i++){
+                float x_Change = abs(Best_Lines[i][0]-Best_Lines[i][2]);
+                float y_Change = abs(Best_Lines[i][1]-Best_Lines[i][3]);
+                float Dot = x_Change*Vertical_x_Change + y_Change*Vertical_y_Change;
+                float Norm =  sqrt(x_Change*x_Change+y_Change*y_Change);
+                float Current_Angle = 360;
+                if(Dot/(Norm*Vertical_Norm) > 1){
+                    Current_Angle = acos(1)*180/M_PI;
+                }
+                else if(Dot/(Norm*Vertical_Norm) < 0){
+                    Current_Angle = acos(0)*180/M_PI;
+                }
+                else{
+                Current_Angle = acos(Dot/(Norm*Vertical_Norm))*180/M_PI;
+                }
+                // Detect if minus or plus
+                if((Best_Lines[i][0] < Best_Lines[i][2] && Best_Lines[i][1] < Best_Lines[i][3]) || (Best_Lines[i][2] < Best_Lines[i][0] && Best_Lines[i][3] < Best_Lines[i][1])){
+                    Current_Angle = -Current_Angle;
+                }
+
+                // If angle closer to 90 degrees than best angle, keep the new one
+                if(abs(abs(Current_Angle)-90) < abs(Angle)){
+                    Angle = abs(abs(Current_Angle)-90);
+                }
+            }
+
+            return Angle;
+        }
+
+
         float Get_Screw_Angle(Mat Image, int Screw_Type){
             // Variables
             int Cutoff_Radius = 10;
@@ -556,6 +665,9 @@ class AnglePublisher : public rclcpp::Node
             }
             else if(Screw_Type == 2){
                 Cutoff_Radius = 14;
+            }
+            else if(Screw_Type == 3){
+                Cutoff_Radius = 18;
             }
 
             // Output initialization
@@ -586,6 +698,9 @@ class AnglePublisher : public rclcpp::Node
             }
             else if(Screw_Type == 2){
                 Angle = Square_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
+            }
+            else if(Screw_Type == 3){
+                Angle = Penta_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
             }
 
             cout << "Angle: " << Angle << endl;
