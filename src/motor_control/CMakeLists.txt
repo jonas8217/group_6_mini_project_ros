@@ -36,6 +36,10 @@ add_executable(CNN_interface
   src/CNN_interface.cpp
 )
 
+add_executable(Angle_Node
+  src/Angle_Node.cpp
+)
+
 ament_target_dependencies(motor_control
 	rclcpp
 	sensor_msgs
@@ -50,7 +54,14 @@ ament_target_dependencies(CNN_interface
   std_msgs
 )
 
-install(TARGETS motor_control CNN_interface DESTINATION lib/${PROJECT_NAME})
+ament_target_dependencies(Angle_Node
+	rclcpp
+	sensor_msgs
+	OpenCV
+	cv_bridge
+)
+
+install(TARGETS motor_control CNN_interface Angle_Node DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
