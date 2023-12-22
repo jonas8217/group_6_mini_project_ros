@@ -137,8 +137,8 @@ class AnglePublisher : public rclcpp::Node
             // Find all lines with a distance of above 2*Radius pixels
             int Distance_Threshold = 2*Radius;
             vector<vector<int>> Lines; // x1, y1, x2, y2
-            for(int i = 0; i < Points.size(); i++){
-                for(int j = i+1; j < Points.size();j++){
+            for(int i = 0; i < (int)Points.size(); i++){
+                for(int j = i+1; j < (int)Points.size();j++){
                     float Dist = sqrt((Points[j][0]-Points[i][0])*(Points[j][0]-Points[i][0]) + (Points[j][1]-Points[i][1])*(Points[j][1]-Points[i][1]));
                     if(Dist > Distance_Threshold){
                         Lines.push_back({Points[i][0],Points[i][1],Points[j][0],Points[j][1]});
@@ -155,9 +155,9 @@ class AnglePublisher : public rclcpp::Node
             vector<vector<int>> New_Points;
             int Max_Parallels = 0;
             int Max_Line_Index = 0;
-            for(int i = 0; i < Lines.size();i++){
+            for(int i = 0; i <(int) Lines.size();i++){
                 int Parallels = 0;
-                for(int j = 0; j < Lines.size(); j++){
+                for(int j = 0; j <(int) Lines.size(); j++){
                     if(i != j){
                         float x1_Change = abs(Lines[i][2]-Lines[i][0]);
                         float y1_Change = abs(Lines[i][3]-Lines[i][1]);
@@ -227,7 +227,7 @@ class AnglePublisher : public rclcpp::Node
             return Angle;
         }
 
-        float Cross_Head_Angle(Mat Image, int Radius){
+        float Cross_Head_Angle(Mat Image){
             // Get image size
             int Rows = Image.rows;
             int Cols = Image.cols;
@@ -259,8 +259,8 @@ class AnglePublisher : public rclcpp::Node
             int Closest_Index_1 = 0;
             int Closest_Index_2 = 0;
 
-            for(int i = 0; i < Lines.size();i++){
-                for(int j = 0; j < Lines.size(); j++){
+            for(int i = 0; i <(int) Lines.size();i++){
+                for(int j = 0; j <(int) Lines.size(); j++){
                     if(i != j){
                         float x1_Change =   abs(Lines[i][0]-Lines[i][2]);
                         float y1_Change =   abs(Lines[i][1]-Lines[i][3]);
@@ -296,7 +296,7 @@ class AnglePublisher : public rclcpp::Node
 
             float Vertical_Norm = sqrt(Vertical_x_Change*Vertical_x_Change+Vertical_y_Change*Vertical_y_Change);
             vector<float> Angles;
-            for(int i = 0; i < Best_Lines.size(); i++){
+            for(int i = 0; i < (int)Best_Lines.size(); i++){
                 float x_Change = abs(Best_Lines[i][0]-Best_Lines[i][2]);
                 float y_Change = abs(Best_Lines[i][1]-Best_Lines[i][3]);
                 float Dot = x_Change*Vertical_x_Change + y_Change*Vertical_y_Change;
@@ -321,7 +321,7 @@ class AnglePublisher : public rclcpp::Node
 
             // find average absolute angle
             float Average_Angle = 0;
-            for(int i = 0; i < Angles.size(); i++){
+            for(int i = 0; i < (int)Angles.size(); i++){
                 Average_Angle += abs(Angles[i]);
             }
             Average_Angle /= Angles.size();
@@ -344,7 +344,7 @@ class AnglePublisher : public rclcpp::Node
             return Angle;
         }
 
-        float Square_Head_Angle(Mat Image, int Radius){
+        float Square_Head_Angle(Mat Image){
             // Get image size
             int Rows = Image.rows;
             int Cols = Image.cols;
@@ -375,19 +375,19 @@ class AnglePublisher : public rclcpp::Node
             vector<vector<Vec4i>> Bucketed_Vectors;
             float Parrallel_Threshold = 5.0;
 
-            for(int i = 0; i < Lines.size();i++){
+            for(int i = 0; i < (int)Lines.size();i++){
                 vector<Vec4i> Bucket = {Lines[i]};
                 bool Already_Taken = false;
                 // Check if i already in bucket dont do anything
-                for(int k = 0; k < Bucketed_Vectors.size(); k++){
-                    for(int l = 0; l < Bucketed_Vectors[k].size(); l++){
+                for(int k = 0; k < (int)Bucketed_Vectors.size(); k++){
+                    for(int l = 0; l < (int)Bucketed_Vectors[k].size(); l++){
                         if(Lines[i] == Bucketed_Vectors[k][l]){
                             Already_Taken = true;
                         }
                     }
                 }
                 if(Already_Taken == false){
-                    for(int j = 0; j < Lines.size(); j++){
+                    for(int j = 0; j < (int)Lines.size(); j++){
                         if(i != j){
                             float x1_Change =   abs(Lines[i][0]-Lines[i][2]);
                             float y1_Change =   abs(Lines[i][1]-Lines[i][3]);
@@ -423,12 +423,12 @@ class AnglePublisher : public rclcpp::Node
 
             // Make average vectors
             vector<Vec4i> New_Lines;
-            for(int i = 0; i < Bucketed_Vectors.size(); i++){
+            for(int i = 0; i < (int)Bucketed_Vectors.size(); i++){
                 int Bucket_x1 = 0;
                 int Bucket_y1 = 0;
                 int Bucket_x2 = 0;
                 int Bucket_y2 = 0;
-                for(int j = 0; j < Bucketed_Vectors[i].size(); j++){
+                for(int j = 0; j < (int)Bucketed_Vectors[i].size(); j++){
                     Bucket_x1 += Bucketed_Vectors[i][j][0];
                     Bucket_y1 += Bucketed_Vectors[i][j][1];
                     Bucket_x2 += Bucketed_Vectors[i][j][2];
@@ -446,8 +446,8 @@ class AnglePublisher : public rclcpp::Node
             int Closest_Index_1 = 0;
             int Closest_Index_2 = 0;
 
-            for(int i = 0; i < New_Lines.size();i++){
-                for(int j = 0; j < New_Lines.size(); j++){
+            for(int i = 0; i < (int)New_Lines.size();i++){
+                for(int j = 0; j < (int)New_Lines.size(); j++){
                     if(i != j){
                         float x1_Change =   abs(New_Lines[i][0]-New_Lines[i][2]);
                         float y1_Change =   abs(New_Lines[i][1]-New_Lines[i][3]);
@@ -492,7 +492,7 @@ class AnglePublisher : public rclcpp::Node
 
             float Vertical_Norm = sqrt(Vertical_x_Change*Vertical_x_Change+Vertical_y_Change*Vertical_y_Change);
             vector<float> Angles;
-            for(int i = 0; i < Best_Lines.size(); i++){
+            for(int i = 0; i < (int)Best_Lines.size(); i++){
                 float x_Change = abs(Best_Lines[i][0]-Best_Lines[i][2]);
                 float y_Change = abs(Best_Lines[i][1]-Best_Lines[i][3]);
                 float Dot = x_Change*Vertical_x_Change + y_Change*Vertical_y_Change;
@@ -517,7 +517,7 @@ class AnglePublisher : public rclcpp::Node
 
             // find average absolute angle
             float Average_Angle = 0;
-            for(int i = 0; i < Angles.size(); i++){
+            for(int i = 0; i < (int)Angles.size(); i++){
                 Average_Angle += abs(Angles[i]);
             }
             Average_Angle /= Angles.size();
@@ -540,7 +540,7 @@ class AnglePublisher : public rclcpp::Node
             return Angle;
         }
 
-        float Penta_Head_Angle(Mat Image, int Radius){
+        float Penta_Head_Angle(Mat Image){
             // Get image size
             int Rows = Image.rows;
             int Cols = Image.cols;
@@ -578,7 +578,7 @@ class AnglePublisher : public rclcpp::Node
 
             // For each line rotate it 360 degrees in 72 degree interval and take the version closest to the top
             vector<Vec4i> Best_Lines;
-            for(int i = 0; i < Lines.size(); i++){
+            for(int i = 0; i < (int)Lines.size(); i++){
                 Vec4i Best_Line = Lines[i];
                 int Best_y = 100;
                 for(int j = 0; j < 5; j++){
@@ -619,7 +619,7 @@ class AnglePublisher : public rclcpp::Node
             float Vertical_y_Change = (Center[1]+20)-(Center[1]-20);
 
             float Vertical_Norm = sqrt(Vertical_x_Change*Vertical_x_Change+Vertical_y_Change*Vertical_y_Change);
-            for(int i = 0; i < Best_Lines.size(); i++){
+            for(int i = 0; i < (int)Best_Lines.size(); i++){
                 float x_Change = abs(Best_Lines[i][0]-Best_Lines[i][2]);
                 float y_Change = abs(Best_Lines[i][1]-Best_Lines[i][3]);
                 float Dot = x_Change*Vertical_x_Change + y_Change*Vertical_y_Change;
@@ -694,13 +694,13 @@ class AnglePublisher : public rclcpp::Node
             }
             else if(Screw_Type == 1){
                 // Get angle
-                Angle = Cross_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
+                Angle = Cross_Head_Angle(Reduced_Edge_Image);
             }
             else if(Screw_Type == 2){
-                Angle = Square_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
+                Angle = Square_Head_Angle(Reduced_Edge_Image);
             }
             else if(Screw_Type == 3){
-                Angle = Penta_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
+                Angle = Penta_Head_Angle(Reduced_Edge_Image);
             }
 
             cout << "Angle: " << Angle << endl;

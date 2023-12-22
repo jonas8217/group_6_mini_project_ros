@@ -1,6 +1,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
-#include <std_msgs/msg/int16.hpp>
+#include <std_msgs/msg/float32_multi_array.hpp>
+
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv4/opencv2/imgcodecs.hpp>
@@ -33,9 +34,9 @@
 #define RX_OFFSET_BYTES LENGTH_INPUT
 #define RX_OFFSET_32 RX_OFFSET_BYTES/4 // This needs to be a whole number, otherwise input in ram is overwritten!
 
-//Reserved_Mem pmem;
-//AXIDMAController dma(UIO_DMA_N, 0x10000);
-//XInvert invertIP;
+Reserved_Mem pmem;
+AXIDMAController dma(UIO_DMA_N, 0x10000);
+XInvert invertIP;
 
 
 uint8_t *inp_buff;
@@ -60,20 +61,18 @@ class CNNInterface : public rclcpp::Node
 				10
 			);
 
-			result_publisher_ = this->create_publisher<std_msgs::msg::Int16>(
+			result_publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
 				"/CNN_screw_type",
 				10
 			);
 
             out_img = cv::Mat(CROPPED_IMAGE_SIZE, CROPPED_IMAGE_SIZE, CV_8UC1);
 
-            //init_IPs_and_setup();
-
 		}
 
 	private:
 		rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr camera_subscription_;
-		rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr result_publisher_;
+		rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr result_publisher_;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;
 
 		cv::Mat inp_img;
@@ -82,45 +81,28 @@ class CNNInterface : public rclcpp::Node
         float results[LENGTH_OUTPUT];
 
 
-        // int init_IPs_and_setup(){
-        //     printf("\r\n--- IPs Intialized --- \r\n");
-        // }
-
-
 		void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
-			RCLCPP_INFO(this->get_logger(), "Received image!");
-            // std::string type = msg->encoding;
-            // printf("type: %s\n", type.c_str());
-			// cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
-			// inp_img = cv_ptr->image;
-            // printf("type: %i\n", inp_img.type());
-            
-            
-            //RCLCPP_INFO(this->get_logger(), "Loading image to dram");
-
+			RCLCPP_INFO(this->get_logger(), "Image received");
+        
+            RCLCPP_INFO(this->get_logger(), "Loading image to dram");
             loadImage(msg);
-            
-            
-            //return;
+			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
-			// RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
+            RCLCPP_INFO(this->get_logger(), "Running IP");
+            run_IP();
+            RCLCPP_INFO(this->get_logger(), "IP completed");
 
-            // RCLCPP_INFO(this->get_logger(), "Running IP");
-
-            // //run_Invert_IP();
-
-            // RCLCPP_INFO(this->get_logger(), "IP completed");
-
-            // outputResults();
-
-            // RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
-
-			
-            // RCLCPP_INFO(this->get_logger(), "image loaded tp msg");
-            
+            RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
             sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
+            //RCLCPP_INFO(this->get_logger(), "Image message Created");
 
 			image_publisher_->publish(*processed_image_msg.get());
+            RCLCPP_INFO(this->get_logger(), "Image published");
+
+            std_msgs::msg::Float32MultiArray output_msg;
+            outputResults(output_msg);
+            result_publisher_->publish(output_msg);
+            RCLCPP_INFO(this->get_logger(), "CNN Result pusblished");
 		}
 
         
@@ -142,43 +124,45 @@ class CNNInterface : public rclcpp::Node
             }
         }
 
-        void outputResults() {
+        void outputResults(std_msgs::msg::Float32MultiArray output_msg) {
+            std::vector<float> result(4);
             for (int i = 0; i < LENGTH_OUTPUT; i++)
-                results[i] = out_buff[i];
+                result[i] = out_buff[i];
+            output_msg.data = result;
         }
 
-        // void run_Invert_IP(){
+        void run_IP(){
             
-        //     pmem.transfer(inp_buff, TX_OFFSET, LENGTH_INPUT);
+            pmem.transfer(inp_buff, TX_OFFSET, LENGTH_INPUT);
 
-        //     dma.MM2SReset();
-        //     dma.S2MMReset();
+            dma.MM2SReset();
+            dma.S2MMReset();
 
-        //     dma.MM2SHalt();
-        //     dma.S2MMHalt();
+            dma.MM2SHalt();
+            dma.S2MMHalt();
 
-        //     dma.MM2SInterruptEnable();
-        //     dma.S2MMInterruptEnable();
+            dma.MM2SInterruptEnable();
+            dma.S2MMInterruptEnable();
 
-        //     dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
-        //     dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
+            dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
+            dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
 
-        //     while(!XInvert_IsReady(&invertIP)) {}
+            while(!XInvert_IsReady(&invertIP)) {}
 
-        //     XInvert_Start(&invertIP);
+            XInvert_Start(&invertIP);
 
-        //     dma.MM2SStart();
-        //     dma.S2MMStart();
+            dma.MM2SStart();
+            dma.S2MMStart();
 
-        //     dma.MM2SSetLength(LENGTH_INPUT);
-        //     dma.S2MMSetLength(LENGTH_OUTPUT);
+            dma.MM2SSetLength(LENGTH_INPUT);
+            dma.S2MMSetLength(LENGTH_OUTPUT);
             
-        //     while (!dma.MM2SIsSynced()) {}
-        //     while (!dma.S2MMIsSynced()) {}
-        //     while(!XInvert_IsDone(&invertIP)) {}
+            while (!dma.MM2SIsSynced()) {}
+            while (!dma.S2MMIsSynced()) {}
+            while(!XInvert_IsDone(&invertIP)) {}
 
-        //     pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
-        // }
+            pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
+        }
 
 
 };
@@ -199,7 +183,6 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    /*
     int Status;
     Status = XInvert_Initialize(&invertIP, "Invert");
 
@@ -207,7 +190,7 @@ int main(int argc, char *argv[])
         printf("Invert initialization failed %d\r\n", Status);
         return XST_FAILURE;
     }
-    */
+
 	setvbuf(stdout,NULL,_IONBF,BUFSIZ);
 
 	rclcpp::init(argc,argv);
