@@ -641,15 +641,15 @@ class AnglePublisher : public rclcpp::Node
             int Upper_Canny = 50;
 
                 // Cross screw needs different thresholds
-            if(Screw_Type == 1){
+            if(Screw_Type == 0){
                 Lower_Canny = 20;
                 Upper_Canny = 50;
                 Cutoff_Radius = 12;
             }
-            else if(Screw_Type == 2){
+            else if(Screw_Type == 3){
                 Cutoff_Radius = 14;
             }
-            else if(Screw_Type == 3){
+            else if(Screw_Type == 2){
                 Cutoff_Radius = 18;
             }
 
@@ -672,17 +672,17 @@ class AnglePublisher : public rclcpp::Node
             Mat Reduced_Edge_Image = Reduce_Image(Edge_Image,Cutoff_Radius,1);
 
             // Use screw specific methods
-            if(Screw_Type == 0){
+            if(Screw_Type == 1){
                 Angle = Flat_Head_Angle(Reduced_Edge_Image,Cutoff_Radius);
             }
-            else if(Screw_Type == 1){
+            else if(Screw_Type == 0){
                 // Get angle
                 Angle = Cross_Head_Angle(Reduced_Edge_Image);
             }
-            else if(Screw_Type == 2){
+            else if(Screw_Type == 3){
                 Angle = Square_Head_Angle(Reduced_Edge_Image);
             }
-            else if(Screw_Type == 3){
+            else if(Screw_Type == 2){
                 Angle = Penta_Head_Angle(Reduced_Edge_Image);
             }
 
