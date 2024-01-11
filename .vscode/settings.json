@@ -4,7 +4,10 @@
         "iosfwd": "cpp",
         "*.msg": "cpp",
         "xinvert_sinit.c": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "xinfer.c": "cpp",
+        "xinfer_sinit.c": "cpp",
+        "xinfer_linux.c": "cpp"
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/foxy/lib/python3.8/site-packages"

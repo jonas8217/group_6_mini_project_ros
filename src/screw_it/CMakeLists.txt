@@ -61,7 +61,18 @@ ament_target_dependencies(Angle_Node
 	cv_bridge
 )
 
-install(TARGETS motor_control CNN_interface Angle_Node DESTINATION lib/${PROJECT_NAME})
+install(TARGETS 
+	motor_control 
+	CNN_interface 
+	Angle_Node 
+	DESTINATION lib/${PROJECT_NAME}
+	)
+
+install(DIRECTORY
+	launch
+	config
+	DESTINATION share/${PROJECT_NAME}
+	)
 
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)

@@ -1,0 +1,13 @@
+<launch>
+  
+  <node pkg="screw_it" exec="motor_control" name="motor_control">
+  </node>
+  <node pkg="screw_it" exec="Angle_Node" name="Angle_Node">
+    <param from="$(find-pkg-share screw_it)/config/do_debug.yaml"/>
+  </node>
+  <node pkg="usb_cam" exec="usb_cam_node_exe" name="usb_cam">
+    <param from="$(find-pkg-share screw_it)/config/params_1.yaml"/>
+  </node>
+  <node pkg="dynamixel_sdk_examples" exec="read_write_node" name="motor_command">
+  </node>
+</launch>

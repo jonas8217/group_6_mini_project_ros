@@ -60,6 +60,12 @@ class MotorControl : public rclcpp::Node
                 std::bind(&MotorControl::run_motor_controller, this)
             );
             
+            this->declare_parameter("debug", "false");
+            rclcpp::Parameter debug;
+            this->get_parameter_or("debug", debug, rclcpp::Parameter("debug", "false"));
+            std::string debugstr = debug.as_string();
+            doDebug = debugstr == "true" ? true : false;
+
 		}
 
 	private:
@@ -70,6 +76,7 @@ class MotorControl : public rclcpp::Node
 
         rclcpp::TimerBase::SharedPtr updater;
 
+        bool doDebug = true;
 
         float angle_ = 0.0;
         float screw_type_[4] = {0,0,0,0};
@@ -163,19 +170,19 @@ class MotorControl : public rclcpp::Node
             // positions 270 475 680 890 (with tape)
             
             const float motor_steps_per_slot = (CAMERA_END - CAMERA_START) / 3.0;
-            static int pos_main = CAMERA_START;
+            static int pos_current = CAMERA_START;
             static int pos_iter = 0;
             static int i = 0;
             static int angle_count = 0;
             static float angle_sum = 0.0;
             static float type_sum[4] = {0, 0, 0, 0};
+            static std::string type_names[4] = {"cross","flat","penta","square"};
             
             int desired_pos = CAMERA_START + pos_iter * motor_steps_per_slot;
-            int command_angle_main = get_approach_step(desired_pos, pos_main);
+            int command_pos = get_approach_step(desired_pos, pos_current);
             
-            std::string type_names[4] = {"cross","flat","penta","square"};
 
-            if (pos_main == desired_pos)
+            if (pos_current == desired_pos)
             {
                 if (i == 0){
                     memset(type_sum, 0, sizeof(type_sum)); 
@@ -201,7 +208,7 @@ class MotorControl : public rclcpp::Node
                             }
                         }
 
-                        RCLCPP_INFO(this->get_logger(), "Screw type: %f", type_names[type]);
+                        RCLCPP_INFO(this->get_logger(), "Screw type: %s", type_names[type].c_str());
 
                         std_msgs::msg::Int16 msg;
                         msg.data = type;
@@ -244,12 +251,13 @@ class MotorControl : public rclcpp::Node
                 }
                 i++;
             }
-            else{
+            else{   
                 i = 0;
-                RCLCPP_INFO(this->get_logger(), "position: %i", command_angle_main);
-                commandMotor(1,command_angle_main);
+                if (doDebug)
+                    RCLCPP_INFO(this->get_logger(), "position: %i", command_pos);
+                commandMotor(1,command_pos);
+                pos_current = command_pos;
             }
-            pos_main = command_angle_main;
         }
 
 

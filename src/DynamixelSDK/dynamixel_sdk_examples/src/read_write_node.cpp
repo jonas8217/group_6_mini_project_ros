@@ -71,11 +71,18 @@ ReadWriteNode::ReadWriteNode()
   const auto QOS_RKL10V =
     rclcpp::QoS(rclcpp::KeepLast(qos_depth)).reliable().durability_volatile();
 
+  this->declare_parameter("debug", "false");
+  rclcpp::Parameter debug;
+  this->get_parameter_or("debug", debug, rclcpp::Parameter("debug", "false"));
+  std::string debugstr = debug.as_string();
+  bool doDebug = debugstr == "true" ? true : false;
+
+
   set_position_subscriber_ =
     this->create_subscription<SetPosition>(
     "set_position",
     QOS_RKL10V,
-    [this](const SetPosition::SharedPtr msg) -> void
+    [this, doDebug](const SetPosition::SharedPtr msg) -> void
     {
       uint8_t dxl_error = 0;
 
@@ -94,12 +101,14 @@ ReadWriteNode::ReadWriteNode()
         &dxl_error
       );
 
+
       if (dxl_comm_result != COMM_SUCCESS) {
         RCLCPP_INFO(this->get_logger(), "%s", packetHandler->getTxRxResult(dxl_comm_result));
       } else if (dxl_error != 0) {
         RCLCPP_INFO(this->get_logger(), "%s", packetHandler->getRxPacketError(dxl_error));
       } else {
-        RCLCPP_INFO(this->get_logger(), "Set [ID: %d] [Goal Position: %d]", msg->id, msg->position);
+        if (doDebug)
+          RCLCPP_INFO(this->get_logger(), "Set [ID: %d] [Goal Position: %d]", msg->id, msg->position);
       }
     }
     );

@@ -14,30 +14,6 @@
 using namespace std;
 using namespace cv;
 
-#define UIO_INVERT_Nsjjk 0L
-
-#define UIO_DMA_N 1
-
-#define XST_FAILURE		1L	//This is nice to have :)
-
-#define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH		320
-#define IMAGE_HEIGHT	240
-#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(320*240*4) // Number of bytes (rgb + grayscale)
-#define LENGTH_INPUT 	LENGTH*3/4 // Number of bytes for input (3/4 because rgb)
-#define LENGTH_OUTPUT	LENGTH/4 // Number of bytes for output (1/4 because grayscale)
-
-#define P_START 0x70000000
-#define TX_OFFSET 0
-#define RX_OFFSET_BYTES LENGTH_INPUT
-#define RX_OFFSET_32 RX_OFFSET_BYTES/4 // This needs to be a whole number, otherwise input in ram is overwritten!
-
-//Reserved_Mem pmem;
-//AXIDMAController dma(UIO_DMA_N, 0x10000);
-//XInvert invertIP;
-
-uint8_t *inp_buff;
-uint8_t *out_buff;
 
 // Ros node stuff
 class AnglePublisher : public rclcpp::Node
@@ -67,6 +43,12 @@ class AnglePublisher : public rclcpp::Node
 				"/screw_angle",
 				qos
 			);
+            this->declare_parameter("debug", "false");
+            rclcpp::Parameter debug;
+            this->get_parameter_or("debug", debug, rclcpp::Parameter("debug", "false"));
+            std::string debugstr = debug.as_string();
+            doDebug = debugstr == "true" ? true : false;
+            
         }
 
     private:
@@ -77,6 +59,7 @@ class AnglePublisher : public rclcpp::Node
         cv::Mat inp_img;
         std_msgs::msg::Float32 Angle;
         int Screw_Type = 0;
+        bool doDebug;
 
         // Cut out center square
         Mat Reduce_Image(Mat Image, int Radius, int BGR_Gray = 0){
@@ -709,50 +692,30 @@ class AnglePublisher : public rclcpp::Node
         }
 
         void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
-            RCLCPP_INFO(this->get_logger(), "Received image!");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Received image!");
 
             cv_bridge::CvImagePtr cv_ptr = cv_bridge::toCvCopy(msg, msg->encoding);
             inp_img = cv_ptr->image;
 
             //std::cout << inp_img.type() << std::endl;
             Angle.data = Get_Screw_Angle(inp_img,Screw_Type);
-            RCLCPP_INFO(this->get_logger(), "Angle found now publishing");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Angle found now publishing");
             Angle_Publisher_->publish(Angle);
-            RCLCPP_INFO(this->get_logger(), "Angle published");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Angle published");
         }
 
         void onScrewMsg(const std_msgs::msg::Int16::SharedPtr msg){
-            RCLCPP_INFO(this->get_logger(), "Received screw type");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Received screw type");
             Screw_Type = msg->data;
         }
 };
 
 int main(int argc, char *argv[])
 {
-    inp_buff = (uint8_t *)malloc(LENGTH_INPUT);
-    if (inp_buff == NULL)
-    {
-        printf("could not allocate user buffer\n");
-        return -1;
-    }
-    out_buff = (uint8_t *)malloc(LENGTH_OUTPUT);
-    if (out_buff == NULL)
-    {
-        printf("could not allocate user buffer\n");
-        return -1;
-    }
-
-    /*
-    int Status;
-    Status = XInvert_Initialize(&invertIP, "Invert");
-
-    if (Status != XST_SUCCESS) {
-        printf("Invert initialization failed %d\r\n", Status);
-        return XST_FAILURE;
-    }
-    */
-	setvbuf(stdout,NULL,_IONBF,BUFSIZ);
-
     rclcpp::init(argc,argv);
     rclcpp::spin(std::make_shared<AnglePublisher>());
 

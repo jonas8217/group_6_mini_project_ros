@@ -1,3 +1,0 @@
-<launch>
-  <node pkg="screw_it" exec="CNN_interface" name="CNN_Interface"/>
-</launch>

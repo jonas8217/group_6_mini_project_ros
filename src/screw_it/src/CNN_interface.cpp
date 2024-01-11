@@ -9,9 +9,9 @@
 
 #include "AXI-DMA-UIO-cpp-driver/include/axi_dma_controller.h"
 #include "ReservedMemory-LKM-and-UserSpaceAPI/reserved_mem.hpp"
-#include "Invert_v1_0/src/xinvert.c"
-#include "Invert_v1_0/src/xinvert_sinit.c"
-#include "Invert_v1_0/src/xinvert_linux.c"
+#include "infer_v1_0/src/xinfer.c"
+#include "infer_v1_0/src/xinfer_sinit.c"
+#include "infer_v1_0/src/xinfer_linux.c"
 
 
 #define UIO_INVERT_Nsjjk 0L
@@ -21,11 +21,11 @@
 #define XST_FAILURE		1L	//This is nice to have :)
 
 #define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH		160
-#define IMAGE_HEIGHT	120
-#define LENGTH IMAGE_WIDTH*IMAGE_HEIGHT*4 //(160*120*4) // Number of bytes (rgb + grayscale)
-#define LENGTH_INPUT 	LENGTH*3/4 // Number of bytes for input (3/4 because rgb)
-#define LENGTH_OUTPUT	4
+#define IMAGE_WIDTH		60
+#define IMAGE_HEIGHT	60
+#define LENGTH_INPUT    IMAGE_WIDTH*IMAGE_HEIGHT*1
+#define LENGTH_OUTPUT	4*4
+#define LENGTH          LENGTH_INPUT + LENGTH_OUTPUT
 
 #define CROPPED_IMAGE_SIZE		60
 
@@ -36,11 +36,16 @@
 
 Reserved_Mem pmem;
 AXIDMAController dma(UIO_DMA_N, 0x10000);
-XInvert invertIP;
+XInfer inferIP;
 
 
 uint8_t *inp_buff;
-uint8_t *out_buff;
+float *out_buff;
+
+union float_uint {
+	float float_val;
+	uint32_t uint_val;
+};
 
 class CNNInterface : public rclcpp::Node
 {
@@ -89,7 +94,7 @@ class CNNInterface : public rclcpp::Node
 			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
             RCLCPP_INFO(this->get_logger(), "Running IP");
-            run_IP();
+            //run_IP();
             RCLCPP_INFO(this->get_logger(), "IP completed");
 
             RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
@@ -107,14 +112,14 @@ class CNNInterface : public rclcpp::Node
 
         
         void loadImage(const sensor_msgs::msg::Image::SharedPtr msg) {
-            int rows = IMAGE_HEIGHT;
-            int cols = IMAGE_WIDTH;
+            int rows = msg->height;
+            int cols = msg->width;
             
-            int rows_start = rows/2 - CROPPED_IMAGE_SIZE/2;
-            int cols_start = cols/2 - CROPPED_IMAGE_SIZE/2;
+            int rows_start = rows/2 - IMAGE_HEIGHT/2;
+            int cols_start = cols/2 - IMAGE_WIDTH/2;
 
-            for (int y = 0; y < CROPPED_IMAGE_SIZE; y++){
-                for (int x = 0; x < CROPPED_IMAGE_SIZE; x++){
+            for (int y = 0; y < IMAGE_HEIGHT; y++){
+                for (int x = 0; x < IMAGE_WIDTH; x++){
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
                     //inp_buff[y*cols+x] = inp_img.at<cv::Vec3b>(rows_start + y, cols_start + x)[0];
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
@@ -127,7 +132,7 @@ class CNNInterface : public rclcpp::Node
         void outputResults(std_msgs::msg::Float32MultiArray output_msg) {
             std::vector<float> result(4);
             for (int i = 0; i < LENGTH_OUTPUT; i++)
-                result[i] = out_buff[i];
+                result[i] = out_buff[i*4];
             output_msg.data = result;
         }
 
@@ -147,9 +152,9 @@ class CNNInterface : public rclcpp::Node
             dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
             dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
 
-            while(!XInvert_IsReady(&invertIP)) {}
+            while(!XInfer_IsReady(&inferIP)) {}
 
-            XInvert_Start(&invertIP);
+            XInfer_Start(&inferIP);
 
             dma.MM2SStart();
             dma.S2MMStart();
@@ -159,7 +164,7 @@ class CNNInterface : public rclcpp::Node
             
             while (!dma.MM2SIsSynced()) {}
             while (!dma.S2MMIsSynced()) {}
-            while(!XInvert_IsDone(&invertIP)) {}
+            while(!XInfer_IsDone(&inferIP)) {}
 
             pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
         }
@@ -176,7 +181,7 @@ int main(int argc, char *argv[])
         printf("could not allocate user buffer\n");
         return -1;
     }
-    out_buff = (uint8_t *)malloc(LENGTH_OUTPUT);
+    out_buff = (float *)malloc(LENGTH_OUTPUT);
     if (out_buff == NULL)
     {
         printf("could not allocate user buffer\n");
@@ -184,10 +189,10 @@ int main(int argc, char *argv[])
     }
 
     int Status;
-    Status = XInvert_Initialize(&invertIP, "Invert");
+    Status = XInfer_Initialize(&inferIP, "Infer");
 
     if (Status != XST_SUCCESS) {
-        printf("Invert initialization failed %d\r\n", Status);
+        printf("Infer initialization failed %d\r\n", Status);
         return XST_FAILURE;
     }
 
