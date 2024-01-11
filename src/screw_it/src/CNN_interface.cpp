@@ -25,9 +25,6 @@
 #define IMAGE_HEIGHT	60
 #define LENGTH_INPUT    IMAGE_WIDTH*IMAGE_HEIGHT*1
 #define LENGTH_OUTPUT	4*4
-#define LENGTH          LENGTH_INPUT + LENGTH_OUTPUT
-
-#define CROPPED_IMAGE_SIZE		60
 
 #define P_START 0x70000000
 #define TX_OFFSET 0
@@ -71,7 +68,7 @@ class CNNInterface : public rclcpp::Node
 				10
 			);
 
-            out_img = cv::Mat(CROPPED_IMAGE_SIZE, CROPPED_IMAGE_SIZE, CV_8UC1);
+            out_img = cv::Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC1);
 
 		}
 
@@ -83,7 +80,7 @@ class CNNInterface : public rclcpp::Node
 		cv::Mat inp_img;
         cv::Mat out_img;
 
-        float results[LENGTH_OUTPUT];
+        float results[LENGTH_OUTPUT/4];
 
 
 		void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
@@ -94,15 +91,15 @@ class CNNInterface : public rclcpp::Node
 			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
             RCLCPP_INFO(this->get_logger(), "Running IP");
-            //run_IP();
+            run_IP();
             RCLCPP_INFO(this->get_logger(), "IP completed");
 
-            RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
-            sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
+            //RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
+            //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
             //RCLCPP_INFO(this->get_logger(), "Image message Created");
 
-			image_publisher_->publish(*processed_image_msg.get());
-            RCLCPP_INFO(this->get_logger(), "Image published");
+			//image_publisher_->publish(*processed_image_msg.get());
+            //RCLCPP_INFO(this->get_logger(), "Image published");
 
             std_msgs::msg::Float32MultiArray output_msg;
             outputResults(output_msg);
@@ -121,10 +118,9 @@ class CNNInterface : public rclcpp::Node
             for (int y = 0; y < IMAGE_HEIGHT; y++){
                 for (int x = 0; x < IMAGE_WIDTH; x++){
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
-                    //inp_buff[y*cols+x] = inp_img.at<cv::Vec3b>(rows_start + y, cols_start + x)[0];
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
                     inp_buff[y*cols+x] = (uchar)(grey/3);
-                    out_img.at<uchar>(y,x) = (uchar)(grey/3);
+                    //out_img.at<uchar>(y,x) = (uchar)(grey/3);
                 }
             }
         }
