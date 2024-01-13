@@ -98,7 +98,7 @@ class CNNInterface : public rclcpp::Node
                     std::cout << idx << std::endl;
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
                     inp_buff[y*cols+x] = (uchar)(grey/3);
-                    out_img.at<uchar>(y,x) = (uchar)(grey/3);
+                    //out_img.at<uchar>(y,x) = (uchar)(grey/3);
                 }
             }
         }
