@@ -101,7 +101,7 @@ class CNNInterface : public rclcpp::Node
             }
         }
 
-        void outputResults(std_msgs::msg::Float32MultiArray output_msg) {
+        void outputResults(std_msgs::msg::Float32MultiArray &output_msg) {
             std::vector<float> result = {0, 0, 0, 0};
             for (int i = 0; i < LENGTH_OUTPUT/4; i++)
                 result[i] = out_buff[i];
