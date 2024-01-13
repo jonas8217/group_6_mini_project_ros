@@ -149,7 +149,7 @@ class CNNInterface : public rclcpp::Node
             RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
             RCLCPP_INFO(this->get_logger(), "Running IP");
-            //run_IP();
+            run_IP();
             RCLCPP_INFO(this->get_logger(), "IP completed");
 
             //RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
