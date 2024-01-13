@@ -2,6 +2,7 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <std_msgs/msg/float32_multi_array.hpp>
 
+#include <chrono>
 
 #include <cv_bridge/cv_bridge.h>
 #include <opencv4/opencv2/imgcodecs.hpp>
@@ -73,6 +74,12 @@ class CNNInterface : public rclcpp::Node
 
             out_img = cv::Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC1);
 
+            this->declare_parameter("debug", "false");
+            rclcpp::Parameter debug;
+            this->get_parameter_or("debug", debug, rclcpp::Parameter("debug", "false"));
+            std::string debugstr = debug.as_string();
+            doDebug = debugstr == "true" ? true : false;
+
         }
 
     private:
@@ -83,8 +90,11 @@ class CNNInterface : public rclcpp::Node
         cv::Mat inp_img;
         cv::Mat out_img;
 
+
         float results[LENGTH_OUTPUT/4];
-        
+
+        bool doDebug = false;
+
         void loadImage(const sensor_msgs::msg::Image::SharedPtr msg) {
             int rows = msg->height; // 120
             int cols = msg->width;  // 160
@@ -109,7 +119,7 @@ class CNNInterface : public rclcpp::Node
         }
 
         void run_IP(){
-            
+            const auto start1{std::chrono::steady_clock::now()};
             pmem.transfer(inp_buff, TX_OFFSET, LENGTH_INPUT);
 
             dma.MM2SReset();
@@ -124,6 +134,7 @@ class CNNInterface : public rclcpp::Node
             dma.MM2SSetSourceAddress(P_START + TX_OFFSET);
             dma.S2MMSetDestinationAddress(P_START + RX_OFFSET_BYTES);
 
+            const auto start2{std::chrono::steady_clock::now()};
             while(!XInfer_IsReady(&inferIP)) {}
 
             XInfer_Start(&inferIP);
@@ -137,20 +148,31 @@ class CNNInterface : public rclcpp::Node
             while (!dma.MM2SIsSynced()) {}
             while (!dma.S2MMIsSynced()) {}
             while(!XInfer_IsDone(&inferIP)) {}
+            const auto end2{std::chrono::steady_clock::now()};
 
             pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
+            const auto end1{std::chrono::steady_clock::now()};
+
+            auto total_time = std::chrono::duration_cast<std::chrono::microseconds>(end1 - start1);
+            auto ip_time = std::chrono::duration_cast<std::chrono::microseconds>(end2 - start2);
+            RCLCPP_INFO(this->get_logger(), "Ip time: %d, transfer to gather time: %d", ip_time, total_time);
         }
 
         void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
-            RCLCPP_INFO(this->get_logger(), "Image received");
-        
-            RCLCPP_INFO(this->get_logger(), "Loading image to dram");
-            loadImage(msg);
-            RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Image received");
 
-            RCLCPP_INFO(this->get_logger(), "Running IP");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Loading image to dram");
+            loadImage(msg);
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
+
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "Running IP");
             run_IP();
-            RCLCPP_INFO(this->get_logger(), "IP completed");
+            if (doDebug)
+                RCLCPP_INFO(this->get_logger(), "IP completed");
 
             //RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
             //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();

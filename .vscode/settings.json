@@ -7,7 +7,8 @@
         "functional": "cpp",
         "xinfer.c": "cpp",
         "xinfer_sinit.c": "cpp",
-        "xinfer_linux.c": "cpp"
+        "xinfer_linux.c": "cpp",
+        "chrono": "cpp"
     },
     "python.autoComplete.extraPaths": [
         "/opt/ros/foxy/lib/python3.8/site-packages"

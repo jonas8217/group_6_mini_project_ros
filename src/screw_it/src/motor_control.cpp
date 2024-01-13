@@ -9,8 +9,8 @@
 #include "dynamixel_sdk_custom_interfaces/msg/set_position.hpp"
 
 #define MOTOR_START         100 
-#define CAMERA_START        270
-#define CAMERA_END          890
+#define CAMERA_START        270-10
+#define CAMERA_END          900
 #define MOUNT_DIFF          CAMERA_START - MOTOR_START;
 
 #define STEPS_PER_DEG       (CAMERA_END - CAMERA_START) / 180.0
@@ -98,7 +98,7 @@ class MotorControl : public rclcpp::Node
                 RCLCPP_INFO(this->get_logger(), "Received screw type from CNN");
             for (int it = 0; it < 4; it++)
             {
-                screw_type_[it] += msg->data[it];
+                screw_type_[it] = msg->data[it];
             }
             new_type_ = true;
         }
@@ -110,6 +110,7 @@ class MotorControl : public rclcpp::Node
             if (degrees)
             {
                 motor_position *= STEPS_PER_DEG;
+                motor_position += 512;
             }
             msg.position = motor_position;
             motor_publisher_->publish(msg);
@@ -190,7 +191,10 @@ class MotorControl : public rclcpp::Node
             if (pos_current == desired_pos)
             {
                 if (i == 0){
-                    memset(type_sum, 0, sizeof(type_sum)); 
+                    for (int it = 0; it < 4; it++)
+                    {
+                        type_sum[it] = 0;
+                    }
                     new_type_ = false;
                 }
                 // wait for 1 second
@@ -199,9 +203,11 @@ class MotorControl : public rclcpp::Node
                     new_angle_ = false;
                     angle_count = 0;
                     angle_sum = 0.0;
-                    RCLCPP_INFO(this->get_logger(), "Checking screw type");
+                    if (doDebug)
+                        RCLCPP_INFO(this->get_logger(), "Checking screw type");
                     if (screw_type_is_valid(type_sum))
                     {
+                        
                         float max_val = 0;
                         int type = 0;
                         for (int it = 0; it < 4; it++)
@@ -224,17 +230,17 @@ class MotorControl : public rclcpp::Node
                 // wait an additional second
                 else if (i == 2 * STEPS_PER_SEC)
                 {
-
-                    RCLCPP_INFO(this->get_logger(), "Checking screw angle");
+                    if (doDebug)
+                        RCLCPP_INFO(this->get_logger(), "Checking screw angle");
                     
                     if (screw_angle_is_valid(angle_count))
                     {
-                        float angle = angle_sum/(float)angle_count;
-                        RCLCPP_INFO(this->get_logger(), "Screw found at angle %f", angle);
+                        float angle = -angle_sum/(float)angle_count;
+                        RCLCPP_INFO(this->get_logger(), "Screw found at angle %f\n", angle);
                         commandMotor(0, angle, true);
                     }
                 }
-                else if (i == 25 * (STEPS_PER_SEC/10))
+                else if (i == 35 * (STEPS_PER_SEC/10))
                 {
                     i = 0;
                     pos_iter ++;
@@ -242,7 +248,8 @@ class MotorControl : public rclcpp::Node
                 }
                 else {
                     if (new_angle_){
-                        RCLCPP_INFO(this->get_logger(), "Got angle %f", angle_);
+                        if (doDebug)
+                            RCLCPP_INFO(this->get_logger(), "Got angle %f", angle_);
                         if (angle_ != 360){
                             angle_sum += angle_;
                             angle_count++;
