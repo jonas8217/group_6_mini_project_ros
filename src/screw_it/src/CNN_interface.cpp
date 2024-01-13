@@ -16,7 +16,7 @@
 
 #define UIO_INVERT_Nsjjk 0L
 
-#define UIO_DMA_N 1
+#define UIO_DMA_N 0
 
 #define XST_FAILURE		1L	//This is nice to have :)
 
@@ -188,8 +188,8 @@ int main(int argc, char *argv[])
     }
 
     int Status;
-    Status = XInfer_Initialize(&inferIP, "Infer");
-
+    Status = XInfer_Initialize(&inferIP, "infer");
+    
     if (Status != XST_SUCCESS) {
         printf("Infer initialization failed %d\r\n", Status);
         return XST_FAILURE;

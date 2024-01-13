@@ -1,5 +1,4 @@
 <launch>
-  
   <node pkg="screw_it" exec="motor_control" name="motor_control">
   </node>
   <node pkg="screw_it" exec="Angle_Node" name="Angle_Node">
