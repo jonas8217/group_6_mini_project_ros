@@ -18,13 +18,13 @@
 
 #define UIO_DMA_N 0
 
-#define XST_FAILURE		1L	//This is nice to have :)
+#define XST_FAILURE        1L    //This is nice to have :)
 
 #define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH		60
-#define IMAGE_HEIGHT	60
+#define IMAGE_WIDTH        60
+#define IMAGE_HEIGHT    60
 #define LENGTH_INPUT    IMAGE_WIDTH*IMAGE_HEIGHT*1
-#define LENGTH_OUTPUT	4*4
+#define LENGTH_OUTPUT    4*4
 
 #define P_START 0x70000000
 #define TX_OFFSET 0
@@ -40,47 +40,47 @@ uint8_t *inp_buff;
 float *out_buff;
 
 union float_uint {
-	float float_val;
-	uint32_t uint_val;
+    float float_val;
+    uint32_t uint_val;
 };
 
 class CNNInterface : public rclcpp::Node
 {
-	public:
-		CNNInterface() : Node("CNN_interface") {
-			RCLCPP_INFO(this->get_logger(), "Initializing CNNInterface node");
+    public:
+        CNNInterface() : Node("CNN_interface") {
+            RCLCPP_INFO(this->get_logger(), "Initializing CNNInterface node");
 
-			RCLCPP_INFO(this->get_logger(), "Starting camera subscription");
+            RCLCPP_INFO(this->get_logger(), "Starting camera subscription");
 
             rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
             auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
 
-			camera_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
-					"/image_raw",
-					qos,
-					std::bind(&CNNInterface::onImageMsg, this, std::placeholders::_1)
-			);
+            camera_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
+                    "/image_raw",
+                    qos,
+                    std::bind(&CNNInterface::onImageMsg, this, std::placeholders::_1)
+            );
 
             image_publisher_= this->create_publisher<sensor_msgs::msg::Image>(
-				"/image_processed",
-				qos
-			);
+                "/image_processed",
+                qos
+            );
 
-			result_publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
-				"/CNN_screw_type",
-				qos
-			);
+            result_publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
+                "/CNN_screw_type",
+                qos
+            );
 
             out_img = cv::Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC1);
 
-		}
+        }
 
-	private:
-		rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr camera_subscription_;
-		rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr result_publisher_;
+    private:
+        rclcpp::Subscription<sensor_msgs::msg::Image>::SharedPtr camera_subscription_;
+        rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr result_publisher_;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;
 
-		cv::Mat inp_img;
+        cv::Mat inp_img;
         cv::Mat out_img;
 
         float results[LENGTH_OUTPUT/4];
@@ -97,7 +97,7 @@ class CNNInterface : public rclcpp::Node
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
                     inp_buff[y*cols+x] = (uchar)(grey/3);
-                    //out_img.at<uchar>(y,x) = (uchar)(grey/3);
+                    out_img.at<uchar>(y,x) = (uchar)(grey/3);
                 }
             }
         }
@@ -142,12 +142,12 @@ class CNNInterface : public rclcpp::Node
             pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
         }
 
-		void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
-			RCLCPP_INFO(this->get_logger(), "Image received");
+        void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
+            RCLCPP_INFO(this->get_logger(), "Image received");
         
             RCLCPP_INFO(this->get_logger(), "Loading image to dram");
             loadImage(msg);
-			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
+            RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
 
             RCLCPP_INFO(this->get_logger(), "Running IP");
             //run_IP();
@@ -157,14 +157,14 @@ class CNNInterface : public rclcpp::Node
             //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
             //RCLCPP_INFO(this->get_logger(), "Image message Created");
 
-			//image_publisher_->publish(*processed_image_msg.get());
+            //image_publisher_->publish(*processed_image_msg.get());
             //RCLCPP_INFO(this->get_logger(), "Image published");
 
             std_msgs::msg::Float32MultiArray output_msg;
             outputResults(output_msg);
             result_publisher_->publish(output_msg);
             RCLCPP_INFO(this->get_logger(), "CNN Result pusblished");
-		}
+        }
 
 };
 
@@ -192,11 +192,11 @@ int main(int argc, char *argv[])
         return XST_FAILURE;
     }
 
-	setvbuf(stdout,NULL,_IONBF,BUFSIZ);
+    setvbuf(stdout,NULL,_IONBF,BUFSIZ);
 
-	rclcpp::init(argc,argv);
-	rclcpp::spin(std::make_shared<CNNInterface>());
+    rclcpp::init(argc,argv);
+    rclcpp::spin(std::make_shared<CNNInterface>());
 
-	rclcpp::shutdown();
-	return 0;
+    rclcpp::shutdown();
+    return 0;
 }
