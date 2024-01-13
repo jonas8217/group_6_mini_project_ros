@@ -88,13 +88,14 @@ class CNNInterface : public rclcpp::Node
         void loadImage(const sensor_msgs::msg::Image::SharedPtr msg) {
             int rows = msg->height;
             int cols = msg->width;
-            
+            std::cout << rows << ", " << cols << std::endl;
             int rows_start = rows/2 - IMAGE_HEIGHT/2;
             int cols_start = cols/2 - IMAGE_WIDTH/2;
 
             for (int y = 0; y < IMAGE_HEIGHT; y++){
                 for (int x = 0; x < IMAGE_WIDTH; x++){
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
+                    std::cout << idx << std::endl;
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
                     inp_buff[y*cols+x] = (uchar)(grey/3);
                     out_img.at<uchar>(y,x) = (uchar)(grey/3);
