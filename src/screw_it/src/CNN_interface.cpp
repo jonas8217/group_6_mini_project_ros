@@ -14,22 +14,22 @@
 #include "infer_v1_0/src/xinfer_linux.c"
 
 
-#define UIO_INVERT_Nsjjk 0L
+#define UIO_INVERT_Nsjjk    0L
 
-#define UIO_DMA_N 0
+#define UIO_DMA_N           0
 
-#define XST_FAILURE        1L    //This is nice to have :)
+#define XST_FAILURE         1L    //This is nice to have :)
 
-#define DEVICE_FILENAME "/dev/reservedmemLKM"
-#define IMAGE_WIDTH        60
-#define IMAGE_HEIGHT    60
-#define LENGTH_INPUT    IMAGE_WIDTH*IMAGE_HEIGHT*1
-#define LENGTH_OUTPUT    4*4
+#define DEVICE_FILENAME     "/dev/reservedmemLKM"
+#define IMAGE_WIDTH         60
+#define IMAGE_HEIGHT        60
+#define LENGTH_INPUT        IMAGE_WIDTH*IMAGE_HEIGHT*1
+#define LENGTH_OUTPUT       4*4
 
-#define P_START 0x70000000
-#define TX_OFFSET 0
-#define RX_OFFSET_BYTES LENGTH_INPUT
-#define RX_OFFSET_32 RX_OFFSET_BYTES/4 // This needs to be a whole number, otherwise input in ram is overwritten!
+#define P_START             0x70000000
+#define TX_OFFSET           0
+#define RX_OFFSET_BYTES     LENGTH_INPUT
+#define RX_OFFSET_32        RX_OFFSET_BYTES/4 // This needs to be a whole number, otherwise input in ram is overwritten!
 
 Reserved_Mem pmem;
 AXIDMAController dma(UIO_DMA_N, 0x10000);
@@ -86,14 +86,15 @@ class CNNInterface : public rclcpp::Node
         float results[LENGTH_OUTPUT/4];
         
         void loadImage(const sensor_msgs::msg::Image::SharedPtr msg) {
-            int rows = msg->height;
-            int cols = msg->width;
-            std::cout << rows << ", " << cols << std::endl;
+            int rows = msg->height; // 120
+            int cols = msg->width;  // 160
             int rows_start = rows/2 - IMAGE_HEIGHT/2;
             int cols_start = cols/2 - IMAGE_WIDTH/2;
+            std::cout << rows_start << ", " << cols_start << std::endl;
 
             for (int y = 0; y < IMAGE_HEIGHT; y++){
                 for (int x = 0; x < IMAGE_WIDTH; x++){
+                    std::cout << x << ", " << y << " ";
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
                     std::cout << idx << std::endl;
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
