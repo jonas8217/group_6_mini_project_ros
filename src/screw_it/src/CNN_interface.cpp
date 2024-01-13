@@ -90,15 +90,12 @@ class CNNInterface : public rclcpp::Node
             int cols = msg->width;  // 160
             int rows_start = rows/2 - IMAGE_HEIGHT/2;
             int cols_start = cols/2 - IMAGE_WIDTH/2;
-            std::cout << rows_start << ", " << cols_start << std::endl;
 
             for (int y = 0; y < IMAGE_HEIGHT; y++){
                 for (int x = 0; x < IMAGE_WIDTH; x++){
-                    std::cout << x << ", " << y << " ";
                     int idx = (rows_start + y)*cols*3+(cols_start + x)*3;
-                    std::cout << idx << std::endl;
                     uint16_t grey = msg->data[idx+0] + msg->data[idx+1] + msg->data[idx+2];
-                    inp_buff[y*cols+x] = (uchar)(grey/3);
+                    inp_buff[y*IMAGE_WIDTH+x] = (uchar)(grey/3);
                     //out_img.at<uchar>(y,x) = (uchar)(grey/3);
                 }
             }
