@@ -84,32 +84,6 @@ class CNNInterface : public rclcpp::Node
         cv::Mat out_img;
 
         float results[LENGTH_OUTPUT/4];
-
-
-		void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
-			RCLCPP_INFO(this->get_logger(), "Image received");
-        
-            RCLCPP_INFO(this->get_logger(), "Loading image to dram");
-            loadImage(msg);
-			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
-
-            RCLCPP_INFO(this->get_logger(), "Running IP");
-            run_IP();
-            RCLCPP_INFO(this->get_logger(), "IP completed");
-
-            //RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
-            //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
-            //RCLCPP_INFO(this->get_logger(), "Image message Created");
-
-			//image_publisher_->publish(*processed_image_msg.get());
-            //RCLCPP_INFO(this->get_logger(), "Image published");
-
-            std_msgs::msg::Float32MultiArray output_msg;
-            outputResults(output_msg);
-            result_publisher_->publish(output_msg);
-            RCLCPP_INFO(this->get_logger(), "CNN Result pusblished");
-		}
-
         
         void loadImage(const sensor_msgs::msg::Image::SharedPtr msg) {
             int rows = msg->height;
@@ -168,6 +142,29 @@ class CNNInterface : public rclcpp::Node
             pmem.gather(out_buff, RX_OFFSET_32, LENGTH_OUTPUT);
         }
 
+		void onImageMsg(const sensor_msgs::msg::Image::SharedPtr msg) {
+			RCLCPP_INFO(this->get_logger(), "Image received");
+        
+            RCLCPP_INFO(this->get_logger(), "Loading image to dram");
+            loadImage(msg);
+			RCLCPP_INFO(this->get_logger(), "Successfully loaded image");
+
+            RCLCPP_INFO(this->get_logger(), "Running IP");
+            run_IP();
+            RCLCPP_INFO(this->get_logger(), "IP completed");
+
+            //RCLCPP_INFO(this->get_logger(), "Loaded image from dram");
+            //sensor_msgs::msg::Image::SharedPtr processed_image_msg = cv_bridge::CvImage(std_msgs::msg::Header(), "mono8", out_img).toImageMsg();
+            //RCLCPP_INFO(this->get_logger(), "Image message Created");
+
+			//image_publisher_->publish(*processed_image_msg.get());
+            //RCLCPP_INFO(this->get_logger(), "Image published");
+
+            std_msgs::msg::Float32MultiArray output_msg;
+            outputResults(output_msg);
+            result_publisher_->publish(output_msg);
+            RCLCPP_INFO(this->get_logger(), "CNN Result pusblished");
+		}
 
 };
 
