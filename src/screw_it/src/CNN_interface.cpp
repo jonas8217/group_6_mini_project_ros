@@ -52,20 +52,23 @@ class CNNInterface : public rclcpp::Node
 
 			RCLCPP_INFO(this->get_logger(), "Starting camera subscription");
 
+            rmw_qos_profile_t qos_profile = rmw_qos_profile_sensor_data;
+            auto qos = rclcpp::QoS(rclcpp::QoSInitialization(qos_profile.history, 5), qos_profile);
+
 			camera_subscription_ = this->create_subscription<sensor_msgs::msg::Image>(
 					"/image_raw",
-					10,
+					qos,
 					std::bind(&CNNInterface::onImageMsg, this, std::placeholders::_1)
 			);
 
             image_publisher_= this->create_publisher<sensor_msgs::msg::Image>(
 				"/image_processed",
-				10
+				qos
 			);
 
 			result_publisher_ = this->create_publisher<std_msgs::msg::Float32MultiArray>(
 				"/CNN_screw_type",
-				10
+				qos
 			);
 
             out_img = cv::Mat(IMAGE_HEIGHT, IMAGE_WIDTH, CV_8UC1);

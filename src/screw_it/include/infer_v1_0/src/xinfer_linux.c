@@ -65,7 +65,7 @@ static int uio_info_read_map_addr(XInfer_uio_info* info, int n) {
     sprintf(file, "/sys/class/uio/uio%d/maps/map%d/addr", info->uio_num, n);
     FILE* fp = fopen(file, "r");
     if (!fp) return -1;
-    ret = fscanf(fp, "0x%x", &info->maps[n].addr);
+    ret = fscanf(fp, "0x%x", (unsigned int*)&info->maps[n].addr);
     fclose(fp);
     if (ret < 0) return -2;
     return 0;
