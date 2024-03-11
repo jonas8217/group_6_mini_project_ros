@@ -40,6 +40,11 @@ add_executable(Angle_Node
   src/Angle_Node.cpp
 )
 
+
+add_executable(CNN_interface_test
+  src/CNN_interface_test.cpp
+)
+
 ament_target_dependencies(motor_control
 	rclcpp
 	sensor_msgs
@@ -61,10 +66,18 @@ ament_target_dependencies(Angle_Node
 	cv_bridge
 )
 
+ament_target_dependencies(CNN_interface_test
+	rclcpp
+  OpenCV
+	cv_bridge
+  std_msgs
+)
+
 install(TARGETS 
 	motor_control 
 	CNN_interface 
 	Angle_Node 
+	CNN_interface_test 
 	DESTINATION lib/${PROJECT_NAME}
 	)
 
