@@ -45,6 +45,10 @@ add_executable(CNN_interface_test
   src/CNN_interface_test.cpp
 )
 
+add_executable(CNN_interface_test_axilite
+  src/CNN_axi_interface_test.cpp
+)
+
 ament_target_dependencies(motor_control
 	rclcpp
 	sensor_msgs
@@ -71,6 +75,13 @@ ament_target_dependencies(CNN_interface_test
   OpenCV
 	cv_bridge
   std_msgs
+  )
+
+ament_target_dependencies(CNN_interface_test_axilite
+  rclcpp
+  OpenCV
+  cv_bridge
+  std_msgs
 )
 
 install(TARGETS 
@@ -78,6 +89,7 @@ install(TARGETS
 	CNN_interface 
 	Angle_Node 
 	CNN_interface_test 
+  CNN_interface_test_axilite
 	DESTINATION lib/${PROJECT_NAME}
 	)
 
